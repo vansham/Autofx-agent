@@ -7,18 +7,14 @@ export default function AgentStatus() {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
   const fetchStatus = async () => {
-    try {
-      const data = await getAgentStatus();
-      setStatus(data);
-    } catch {
-      setStatus({ isRunning: false, lastUpdate: null });
-    }
+    try { setStatus(await getAgentStatus()); }
+    catch { setStatus({ isRunning: false, lastUpdate: null }); }
   };
 
   useEffect(() => {
     fetchStatus();
-    const interval = setInterval(fetchStatus, 10000);
-    return () => clearInterval(interval);
+    const i = setInterval(fetchStatus, 10000);
+    return () => clearInterval(i);
   }, []);
 
   const toggle = async () => {
@@ -26,62 +22,73 @@ export default function AgentStatus() {
       if (status?.isRunning) await stopAgent();
       else await startAgent();
       fetchStatus();
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const handleAnalyze = async () => {
     setLoadingAnalysis(true);
-    try {
-      const res = await analyzeMarket();
-      setAnalysis(res.analysis);
-    } catch {
-      setAnalysis('Failed to get analysis. Check GEMINI_API_KEY in .env');
-    } finally {
-      setLoadingAnalysis(false);
-    }
+    try { setAnalysis((await analyzeMarket()).analysis); }
+    catch { setAnalysis('Rate limit hit. Try again in 1 minute.'); }
+    finally { setLoadingAnalysis(false); }
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <div className="card p-5 animate-fade-in">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-white font-semibold">Agent Status</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Last update: {status?.lastUpdate ? new Date(status.lastUpdate).toLocaleTimeString() : '—'}
+          <div className="flex items-center gap-2">
+            <h2 className="text-white font-semibold text-sm">Agent Status</h2>
+            {status?.isRunning && (
+              <span className="w-2 h-2 rounded-full bg-green-400"
+                style={{ animation: 'pulse-green 2s infinite' }} />
+            )}
+          </div>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {status?.lastUpdate
+              ? `Last poll: ${new Date(status.lastUpdate).toLocaleTimeString()}`
+              : 'Not started'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full ${
-            status?.isRunning ? 'bg-green-900/40 text-green-400' : 'bg-slate-800 text-slate-400'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${status?.isRunning ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
-            {status?.isRunning ? 'Active' : 'Paused'}
-          </div>
-          <button
-            onClick={toggle}
-            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-mono px-2 py-1 rounded ${status?.isRunning ? 'badge-green' : 'badge-red'}`}>
+            {status?.isRunning ? 'ACTIVE' : 'STOPPED'}
+          </span>
+          <button onClick={toggle}
+            className={`text-xs px-3 py-1.5 rounded font-medium transition-all border ${
               status?.isRunning
-                ? 'bg-red-900/40 text-red-400 hover:bg-red-900/60'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
+                ? 'border-red-500/30 text-red-400 hover:bg-red-500/10'
+                : 'border-blue-500/30 text-blue-400 hover:bg-blue-500/10'
+            }`}>
             {status?.isRunning ? 'Stop' : 'Start'}
           </button>
         </div>
       </div>
 
-      {/* AI Analysis */}
-      <button
-        onClick={handleAnalyze}
-        disabled={loadingAnalysis}
-        className="w-full text-xs text-slate-400 border border-slate-700 rounded-lg px-3 py-2 hover:bg-slate-800 transition-colors disabled:opacity-50"
-      >
-        {loadingAnalysis ? 'Analyzing market...' : '✦ Ask agent to analyze market'}
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        {[
+          { label: 'NETWORK', value: 'Arc Testnet' },
+          { label: 'INTERVAL', value: '30s' },
+          { label: 'PROTOCOL', value: 'x402' },
+        ].map(({ label, value }) => (
+          <div key={label} className="rounded p-2.5" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+            <p className="text-xs font-mono mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
+            <p className="text-xs font-mono text-blue-400">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={handleAnalyze} disabled={loadingAnalysis}
+        className="w-full text-xs py-2 rounded transition-all font-mono disabled:opacity-50"
+        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+        {loadingAnalysis
+          ? <span>analyzing<span style={{ animation: 'blink 1s infinite' }}>_</span></span>
+          : '✦ AI market analysis'}
       </button>
+
       {analysis && (
-        <div className="mt-3 text-xs text-slate-300 bg-slate-800/60 rounded-lg p-3 leading-relaxed">
+        <div className="mt-3 text-xs rounded p-3 leading-relaxed font-mono"
+          style={{ background: 'rgba(63,185,80,0.05)', border: '1px solid rgba(63,185,80,0.15)', color: '#7ee787' }}>
           {analysis}
         </div>
       )}

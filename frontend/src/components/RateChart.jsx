@@ -1,34 +1,48 @@
 import { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getRates, refreshRates } from '../lib/api';
 
 const PAIRS = ['USDC/EURC', 'EURC/USDC', 'USDC/MXNB', 'USDC/JPYC'];
+const COLORS = { 'USDC/EURC': '#58a6ff', 'EURC/USDC': '#3fb950', 'USDC/MXNB': '#bc8cff', 'USDC/JPYC': '#d29922' };
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded p-2 text-xs font-mono" style={{ background: '#1c2432', border: '1px solid #2d4a6e' }}>
+      <p style={{ color: '#8b949e' }}>{label}</p>
+      <p style={{ color: payload[0]?.color }}>{parseFloat(payload[0]?.value).toFixed(4)}</p>
+    </div>
+  );
+};
 
 export default function RateChart() {
   const [rates, setRates] = useState(null);
   const [history, setHistory] = useState([]);
   const [selected, setSelected] = useState('USDC/EURC');
   const [refreshing, setRefreshing] = useState(false);
+  const [change, setChange] = useState(null);
 
   const fetchRates = async () => {
     try {
       const data = await getRates();
       setRates(data);
       if (data[selected]) {
-        setHistory(prev => [
-          ...prev.slice(-19),
-          { time: new Date().toLocaleTimeString(), value: parseFloat(data[selected]) },
-        ]);
+        const val = parseFloat(data[selected]);
+        setHistory(prev => {
+          if (prev.length > 1) {
+            const first = prev[0].value;
+            setChange(((val - first) / first * 100).toFixed(3));
+          }
+          return [...prev.slice(-29), { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), value: val }];
+        });
       }
-    } catch (err) {
-      console.error('Rate fetch error:', err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   useEffect(() => {
     fetchRates();
-    const interval = setInterval(fetchRates, 30000);
-    return () => clearInterval(interval);
+    const i = setInterval(fetchRates, 30000);
+    return () => clearInterval(i);
   }, [selected]);
 
   const handleRefresh = async () => {
@@ -38,67 +52,71 @@ export default function RateChart() {
   };
 
   const currentRate = rates?.[selected];
+  const color = COLORS[selected];
+  const isPositive = change >= 0;
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <div className="card p-5 animate-fade-in-delay-1">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-white font-semibold">Live FX Rates</h2>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="text-xs text-slate-400 hover:text-white transition-colors disabled:opacity-50"
-        >
-          {refreshing ? 'Refreshing...' : '↻ Refresh'}
+        <h2 className="text-white font-semibold text-sm">Live FX Rates</h2>
+        <button onClick={handleRefresh} disabled={refreshing}
+          className="text-xs font-mono transition-colors disabled:opacity-50"
+          style={{ color: 'var(--text-muted)' }}>
+          {refreshing ? 'fetching...' : '↻ refresh'}
         </button>
       </div>
 
-      {/* Pair selector */}
-      <div className="flex gap-2 mb-4 flex-wrap">
+      {/* Pair tabs */}
+      <div className="flex gap-1.5 mb-4 flex-wrap">
         {PAIRS.map(pair => (
-          <button
-            key={pair}
-            onClick={() => setSelected(pair)}
-            className={`text-xs px-3 py-1 rounded-full transition-colors ${
-              selected === pair
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
+          <button key={pair} onClick={() => setSelected(pair)}
+            className="text-xs font-mono px-2.5 py-1 rounded transition-all"
+            style={selected === pair
+              ? { background: `${COLORS[pair]}18`, color: COLORS[pair], border: `1px solid ${COLORS[pair]}40` }
+              : { background: 'var(--bg-secondary)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
             {pair}
           </button>
         ))}
       </div>
 
-      {/* Current rate display */}
-      <div className="mb-4">
-        <span className="text-3xl font-bold text-white">
-          {currentRate ? parseFloat(currentRate).toFixed(4) : '—'}
+      {/* Rate display */}
+      <div className="flex items-end gap-3 mb-4">
+        <span className="font-mono text-4xl font-bold" style={{ color }}>
+          {currentRate ? parseFloat(currentRate).toFixed(4) : '-.----'}
         </span>
-        <span className="text-slate-500 text-sm ml-2">{selected}</span>
+        {change !== null && (
+          <span className={`font-mono text-xs mb-1.5 px-2 py-0.5 rounded ${isPositive ? 'badge-green' : 'badge-red'}`}>
+            {isPositive ? '▲' : '▼'} {Math.abs(change)}%
+          </span>
+        )}
       </div>
 
-      {/* Sparkline */}
+      {/* Chart */}
       {history.length > 1 ? (
-        <ResponsiveContainer width="100%" height={80}>
-          <LineChart data={history}>
-            <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={false} />
+        <ResponsiveContainer width="100%" height={90}>
+          <AreaChart data={history} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id={`grad-${selected}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.15} />
+                <stop offset="95%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area type="monotone" dataKey="value" stroke={color} strokeWidth={1.5}
+              fill={`url(#grad-${selected})`} dot={false} />
             <XAxis dataKey="time" hide />
             <YAxis domain={['auto', 'auto']} hide />
-            <Tooltip
-              contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 8, fontSize: 12 }}
-              labelStyle={{ color: '#94a3b8' }}
-              itemStyle={{ color: '#60a5fa' }}
-            />
-          </LineChart>
+            <Tooltip content={<CustomTooltip />} />
+          </AreaChart>
         </ResponsiveContainer>
       ) : (
-        <div className="h-20 flex items-center justify-center text-xs text-slate-600">
-          Collecting rate history...
+        <div className="h-20 flex items-center justify-center font-mono text-xs"
+          style={{ color: 'var(--text-muted)' }}>
+          collecting data<span style={{ animation: 'blink 1s infinite' }}>_</span>
         </div>
       )}
 
-      <p className="text-xs text-slate-600 mt-2">
-        Updated: {rates?.updatedAt ? new Date(rates.updatedAt).toLocaleTimeString() : '—'} · Polls every 30s
+      <p className="text-xs font-mono mt-2" style={{ color: 'var(--text-muted)' }}>
+        updated {rates?.updatedAt ? new Date(rates.updatedAt).toLocaleTimeString() : '—'} · polls every 30s
       </p>
     </div>
   );

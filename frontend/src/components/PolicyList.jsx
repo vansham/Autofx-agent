@@ -1,80 +1,74 @@
 import { useState, useEffect } from 'react';
 import { getPolicies, updatePolicy, deletePolicy } from '../lib/api';
 
+const cond = { gt: '>', lt: '<', gte: '≥', lte: '≤' };
+
 export default function PolicyList({ refresh }) {
   const [policies, setPolicies] = useState([]);
 
-  const fetchPolicies = async () => {
-    try {
-      const data = await getPolicies();
-      setPolicies(data);
-    } catch (err) {
-      console.error(err);
-    }
+  const fetch = async () => {
+    try { setPolicies(await getPolicies()); }
+    catch (err) { console.error(err); }
   };
 
-  useEffect(() => { fetchPolicies(); }, [refresh]);
+  useEffect(() => { fetch(); }, [refresh]);
 
-  const toggleActive = async (policy) => {
-    await updatePolicy(policy.id, { active: !policy.active });
-    fetchPolicies();
-  };
+  const toggle = async (p) => { await updatePolicy(p.id, { active: !p.active }); fetch(); };
+  const remove = async (id) => { if (!confirm('Delete policy?')) return; await deletePolicy(id); fetch(); };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this policy?')) return;
-    await deletePolicy(id);
-    fetchPolicies();
-  };
-
-  const conditionLabel = { gt: '>', lt: '<', gte: '≥', lte: '≤' };
-
-  if (!policies.length) {
-    return (
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <h2 className="text-white font-semibold mb-3">Active Policies</h2>
-        <p className="text-sm text-slate-500">No policies yet. Create one above.</p>
-      </div>
-    );
-  }
+  const active = policies.filter(p => p.active).length;
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-      <h2 className="text-white font-semibold mb-4">Active Policies ({policies.filter(p => p.active).length}/{policies.length})</h2>
-      <div className="space-y-3">
-        {policies.map(policy => (
-          <div key={policy.id} className="flex items-center justify-between bg-slate-800/60 rounded-lg px-4 py-3">
-            <div>
-              <p className="text-sm text-white font-medium">{policy.name}</p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Swap <span className="text-blue-400">{policy.amount} {policy.pair.split('/')[0]}</span> when{' '}
-                <span className="text-white">{policy.pair}</span>{' '}
-                <span className="text-yellow-400">{conditionLabel[policy.condition]} {policy.threshold}</span>
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {policy.lastTriggered && (
-                <span className="text-xs text-green-400 bg-green-900/30 px-2 py-0.5 rounded-full">Triggered</span>
-              )}
-              <button
-                onClick={() => toggleActive(policy)}
-                className={`text-xs px-2 py-1 rounded-md transition-colors ${
-                  policy.active
-                    ? 'bg-green-900/40 text-green-400 hover:bg-green-900/60'
-                    : 'bg-slate-700 text-slate-400 hover:text-white'
-                }`}
-              >
-                {policy.active ? 'On' : 'Off'}
-              </button>
-              <button
-                onClick={() => handleDelete(policy.id)}
-                className="text-xs text-slate-600 hover:text-red-400 transition-colors px-1"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        ))}
+    <div className="card p-5 animate-fade-in-delay-3">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-white font-semibold text-sm">Active Policies</h2>
+        <span className="font-mono text-xs px-2 py-0.5 rounded badge-blue">{active}/{policies.length} active</span>
       </div>
+
+      {!policies.length ? (
+        <div className="text-center py-6">
+          <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>no policies deployed</p>
+          <p className="font-mono text-xs mt-1" style={{ color: 'var(--text-muted)' }}>create one to start trading autonomously</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {policies.map((p, i) => (
+            <div key={p.id} className="rounded p-3 transition-all"
+              style={{ background: 'var(--bg-secondary)', border: `1px solid ${p.active ? 'rgba(88,166,255,0.2)' : 'var(--border)'}`,
+                animationDelay: `${i * 0.05}s` }}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-xs font-medium text-white truncate">{p.name}</p>
+                    {p.lastTriggered && (
+                      <span className="text-xs font-mono px-1.5 py-0.5 rounded badge-green shrink-0">triggered</span>
+                    )}
+                  </div>
+                  <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
+                    swap <span className="text-blue-400">{p.amount} {p.pair.split('/')[0]}</span>
+                    {' '}when{' '}
+                    <span className="text-white">{p.pair}</span>
+                    {' '}
+                    <span className="text-yellow-400">{cond[p.condition]} {p.threshold}</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button onClick={() => toggle(p)}
+                    className="text-xs font-mono px-2 py-1 rounded transition-all"
+                    style={p.active
+                      ? { background: 'rgba(63,185,80,0.1)', color: '#3fb950', border: '1px solid rgba(63,185,80,0.25)' }
+                      : { background: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                    {p.active ? 'on' : 'off'}
+                  </button>
+                  <button onClick={() => remove(p.id)}
+                    className="text-xs font-mono w-6 h-6 flex items-center justify-center rounded transition-colors"
+                    style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}>✕</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
