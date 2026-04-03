@@ -8,7 +8,7 @@
     "dev": "nodemon src/index.js"
   },
   "dependencies": {
-    "@circle-fin/circle-sdk": "^4.0.0",
+    "@circle-fin/developer-controlled-wallets": "^10.2.0",
     "@langchain/anthropic": "^0.1.0",
     "axios": "^1.6.0",
     "cors": "^2.8.5",

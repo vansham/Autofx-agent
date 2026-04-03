@@ -3,3 +3,7 @@ node_modules/
 dist/
 .DS_Store
 *.log
+recovery_file.dat
+Backend/register.js
+Backend/create-wallet.js
+Backend/get-usdc.js
