@@ -1,25 +1,18 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const config = require('../config');
+require('dotenv').config();
 const fxMonitor = require('./fxMonitor');
 const policyEngine = require('./policyEngine');
 
-const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-const SYSTEM_PROMPT = `You are AutoFX Agent — an autonomous FX trading assistant running on Arc blockchain.
-You monitor stablecoin FX rates and execute swaps based on user-defined policies.
-Be concise, data-driven, and always explain your actions clearly.
-When suggesting policy changes, provide specific numbers based on current market data.`;
+const SYSTEM_PROMPT = `You are AutoFX Agent on Arc blockchain. Analyze FX rates and policies. Be concise.`;
 
 async function analyzeMarket() {
   const rates = fxMonitor.getRates();
   const policies = policyEngine.listPolicies();
   const history = policyEngine.getHistory().slice(0, 5);
-  const prompt = `${SYSTEM_PROMPT}
-Current FX Rates: ${JSON.stringify(rates, null, 2)}
-Active Policies: ${JSON.stringify(policies, null, 2)}
-Recent Transactions: ${JSON.stringify(history, null, 2)}
-Analyze market, which policies close to triggering, any recommendations. Under 150 words.`;
+  const prompt = `${SYSTEM_PROMPT}\nRates: ${JSON.stringify(rates)}\nPolicies: ${JSON.stringify(policies)}\nHistory: ${JSON.stringify(history)}\nAnalyze market in under 150 words.`;
   const result = await model.generateContent(prompt);
   return result.response.text();
 }
@@ -27,11 +20,7 @@ Analyze market, which policies close to triggering, any recommendations. Under 1
 async function getAgentInsight(question) {
   const rates = fxMonitor.getRates();
   const history = policyEngine.getHistory().slice(0, 10);
-  const prompt = `${SYSTEM_PROMPT}
-Rates: ${JSON.stringify(rates)}
-History: ${JSON.stringify(history)}
-Question: ${question}
-Answer concisely.`;
+  const prompt = `${SYSTEM_PROMPT}\nRates: ${JSON.stringify(rates)}\nHistory: ${JSON.stringify(history)}\nQuestion: ${question}\nAnswer concisely.`;
   const result = await model.generateContent(prompt);
   return result.response.text();
 }

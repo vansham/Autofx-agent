@@ -37,7 +37,7 @@ export default function AgentStatus() {
       const res = await analyzeMarket();
       setAnalysis(res.analysis);
     } catch {
-      setAnalysis('Failed to get analysis. Check ANTHROPIC_API_KEY in .env');
+      setAnalysis('Failed to get analysis. Check GEMINI_API_KEY in .env');
     } finally {
       setLoadingAnalysis(false);
     }
