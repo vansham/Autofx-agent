@@ -8,3 +8,4 @@ Backend/register.js
 Backend/create-wallet.js
 Backend/get-usdc.js
 Backend/recovery_file*.dat
+db.json

@@ -1,12 +1,8 @@
+const db = require('./db');
 const x402Handler = require('./x402Handler');
 
-// In-memory policy store (replace with DB in production)
-let policies = [];
-let txHistory = [];
-
-// Evaluate all active policies against current rates
 async function evaluate(rates) {
-  const activePolicies = policies.filter(p => p.active);
+  const activePolicies = db.getPolicies().filter(p => p.active);
   for (const policy of activePolicies) {
     const rate = parseFloat(rates[policy.pair]);
     if (!rate) continue;
@@ -28,72 +24,46 @@ async function evaluate(rates) {
           amount: policy.amount,
           rate,
         });
-        policy.lastTriggered = new Date().toISOString();
-        txHistory.unshift({
-          id: tx.id || `tx_${Date.now()}`,
+        db.updatePolicy(policy.id, { lastTriggered: new Date().toISOString() });
+        db.addTransaction({
+          id: tx.id,
           policyId: policy.id,
           policyName: policy.name,
           pair: policy.pair,
           amount: policy.amount,
           rate,
-          status: tx.status || 'PENDING',
+          status: 'CONFIRMED',
+          txHash: tx.txHash,
           createdAt: new Date().toISOString(),
         });
       } catch (err) {
-        console.error(`[Policy Engine] Swap failed for policy ${policy.id}:`, err.message);
+        console.error(`[Policy Engine] Swap failed:`, err.message);
       }
     }
 
-    // Reset trigger lock after 5 minutes to allow re-trigger
     if (policy.lastTriggered) {
       const elapsed = Date.now() - new Date(policy.lastTriggered).getTime();
-      if (elapsed > 5 * 60 * 1000) policy.lastTriggered = null;
+      if (elapsed > 5 * 60 * 1000) db.updatePolicy(policy.id, { lastTriggered: null });
     }
   }
 }
 
-function listPolicies() { return policies; }
-
-function getPolicy(id) { return policies.find(p => p.id === id); }
-
+function listPolicies() { return db.getPolicies(); }
+function getPolicy(id) { return db.getPolicy(id); }
 function createPolicy({ name, pair, condition, threshold, amount }) {
   const policy = {
     id: `pol_${Date.now()}`,
-    name,
-    pair,         // e.g. "USDC/EURC"
-    condition,    // "gt" | "lt" | "gte" | "lte"
+    name, pair, condition,
     threshold: parseFloat(threshold),
     amount: parseFloat(amount),
     active: true,
     lastTriggered: null,
     createdAt: new Date().toISOString(),
   };
-  policies.push(policy);
-  return policy;
+  return db.addPolicy(policy);
 }
+function updatePolicy(id, updates) { return db.updatePolicy(id, updates); }
+function deletePolicy(id) { return db.deletePolicy(id); }
+function getHistory() { return db.getTransactions(); }
 
-function updatePolicy(id, updates) {
-  const idx = policies.findIndex(p => p.id === id);
-  if (idx === -1) return null;
-  policies[idx] = { ...policies[idx], ...updates };
-  return policies[idx];
-}
-
-function deletePolicy(id) {
-  const idx = policies.findIndex(p => p.id === id);
-  if (idx === -1) return false;
-  policies.splice(idx, 1);
-  return true;
-}
-
-function getHistory() { return txHistory; }
-
-module.exports = {
-  evaluate,
-  listPolicies,
-  getPolicy,
-  createPolicy,
-  updatePolicy,
-  deletePolicy,
-  getHistory,
-};
+module.exports = { evaluate, listPolicies, getPolicy, createPolicy, updatePolicy, deletePolicy, getHistory };
