@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@circle-fin/developer-controlled-wallets": "^10.2.0",
+    "@google/generative-ai": "^0.24.1",
     "@langchain/anthropic": "^0.1.0",
     "axios": "^1.6.0",
     "cors": "^2.8.5",

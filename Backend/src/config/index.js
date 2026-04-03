@@ -9,11 +9,9 @@ module.exports = {
     walletSetId: process.env.CIRCLE_WALLET_SET_ID,
     agentWalletId: process.env.CIRCLE_AGENT_WALLET_ID,
   },
-  anthropic: {
-    apiKey: process.env.ANTHROPIC_API_KEY,
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY,
   },
-  // Supported stablecoins on Arc
   supportedTokens: ['USDC', 'EURC', 'MXNB', 'JPYC', 'PHPC', 'AUDF', 'QCAD'],
-  // FX polling interval (ms)
   pollInterval: 30000,
 };
