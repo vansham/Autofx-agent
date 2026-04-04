@@ -1,28 +1,39 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk');
 require('dotenv').config();
 const fxMonitor = require('./fxMonitor');
 const policyEngine = require('./policyEngine');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const SYSTEM_PROMPT = `You are AutoFX Agent on Arc blockchain. Analyze FX rates and policies. Be concise.`;
+const SYSTEM_PROMPT = `You are AutoFX Agent on Arc blockchain. Analyze FX rates and policies. Be concise under 150 words.`;
 
 async function analyzeMarket() {
   const rates = fxMonitor.getRates();
   const policies = policyEngine.listPolicies();
   const history = policyEngine.getHistory().slice(0, 5);
-  const prompt = `${SYSTEM_PROMPT}\nRates: ${JSON.stringify(rates)}\nPolicies: ${JSON.stringify(policies)}\nHistory: ${JSON.stringify(history)}\nAnalyze market in under 150 words.`;
-  const result = await model.generateContent(prompt);
-  return result.response.text();
+  const response = await groq.chat.completions.create({
+    model: 'llama-3.1-8b-instant',
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: `Rates: ${JSON.stringify(rates)}\nPolicies: ${JSON.stringify(policies)}\nHistory: ${JSON.stringify(history)}\nAnalyze market briefly.` }
+    ],
+    max_tokens: 200,
+  });
+  return response.choices[0].message.content;
 }
 
 async function getAgentInsight(question) {
   const rates = fxMonitor.getRates();
   const history = policyEngine.getHistory().slice(0, 10);
-  const prompt = `${SYSTEM_PROMPT}\nRates: ${JSON.stringify(rates)}\nHistory: ${JSON.stringify(history)}\nQuestion: ${question}\nAnswer concisely.`;
-  const result = await model.generateContent(prompt);
-  return result.response.text();
+  const response = await groq.chat.completions.create({
+    model: 'llama-3.1-8b-instant',
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: `Rates: ${JSON.stringify(rates)}\nHistory: ${JSON.stringify(history)}\nQuestion: ${question}` }
+    ],
+    max_tokens: 200,
+  });
+  return response.choices[0].message.content;
 }
 
 module.exports = { analyzeMarket, getAgentInsight };
