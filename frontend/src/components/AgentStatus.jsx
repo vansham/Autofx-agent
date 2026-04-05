@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import { getAgentStatus, startAgent, stopAgent, analyzeMarket } from '../lib/api';
 
+function renderMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<span style="color:#e6edf3;font-weight:600">$1</span>')
+    .replace(/\*(.*?)\*/g, '<span style="color:#7ee787">$1</span>')
+    .replace(/^- /gm, '• ')
+    .replace(/\n/g, '<br/>');
+}
+
 export default function AgentStatus() {
   const [status, setStatus] = useState(null);
   const [analysis, setAnalysis] = useState('');
@@ -43,7 +51,7 @@ export default function AgentStatus() {
                 style={{ animation: 'pulse-green 2s infinite' }} />
             )}
           </div>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs mt-0.5 font-mono" style={{ color: 'var(--text-muted)' }}>
             {status?.lastUpdate
               ? `Last poll: ${new Date(status.lastUpdate).toLocaleTimeString()}`
               : 'Not started'}
@@ -64,7 +72,6 @@ export default function AgentStatus() {
         </div>
       </div>
 
-      {/* Stats row */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         {[
           { label: 'NETWORK', value: 'Arc Testnet' },
@@ -81,16 +88,14 @@ export default function AgentStatus() {
       <button onClick={handleAnalyze} disabled={loadingAnalysis}
         className="w-full text-xs py-2 rounded transition-all font-mono disabled:opacity-50"
         style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-        {loadingAnalysis
-          ? <span>analyzing<span style={{ animation: 'blink 1s infinite' }}>_</span></span>
-          : '✦ AI market analysis'}
+        {loadingAnalysis ? 'analyzing...' : '✦ AI market analysis'}
       </button>
 
       {analysis && (
         <div className="mt-3 text-xs rounded p-3 leading-relaxed font-mono"
-          style={{ background: 'rgba(63,185,80,0.05)', border: '1px solid rgba(63,185,80,0.15)', color: '#7ee787' }}>
-          {analysis}
-        </div>
+          style={{ background: 'rgba(63,185,80,0.05)', border: '1px solid rgba(63,185,80,0.15)', color: '#7ee787' }}
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(analysis) }}
+        />
       )}
     </div>
   );

@@ -3,12 +3,10 @@ const router = express.Router();
 const circleClient = require('../services/circleClient');
 const config = require('../config');
 
-// GET /api/v1/wallet/balance
 router.get('/balance', async (req, res) => {
   try {
     const walletId = req.query.walletId || config.circle.agentWalletId;
     if (!walletId || walletId === 'your_agent_wallet_id_here') {
-      // Return mock data in dev mode
       return res.json({
         balances: [
           { token: { symbol: 'USDC' }, amount: '100.00' },
@@ -17,28 +15,26 @@ router.get('/balance', async (req, res) => {
         note: 'Mock data — set CIRCLE_AGENT_WALLET_ID in .env',
       });
     }
-    const balances = await circleClient.getWalletBalance(walletId);
+    const data = await circleClient.getWalletBalance(walletId);
+    const balances = (data.tokenBalances || []).map(b => ({
+      token: { symbol: b.token?.symbol },
+      amount: parseFloat(b.amount).toFixed(2),
+    }));
     res.json({ balances });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/v1/wallet/list
 router.get('/list', async (req, res) => {
   try {
-    const walletSetId = config.circle.walletSetId;
-    if (!walletSetId || walletSetId === 'your_wallet_set_id_here') {
-      return res.json({ wallets: [], note: 'Set CIRCLE_WALLET_SET_ID in .env' });
-    }
-    const wallets = await circleClient.listWallets(walletSetId);
+    const wallets = await circleClient.listWallets(config.circle.walletSetId);
     res.json({ wallets });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST /api/v1/wallet/create
 router.post('/create', async (req, res) => {
   try {
     const { name } = req.body;
