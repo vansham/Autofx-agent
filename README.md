@@ -1,23 +1,60 @@
 # 🤖 AutoFX Agent
 
-**Autonomous FX trading agent on Arc blockchain** — set policies, agent executes swaps automatically using x402 protocol + Circle MPC Wallets.
+> Autonomous FX trading agent on Arc blockchain — set policies, agent executes swaps automatically using x402 protocol + Circle MPC Wallets.
 
-> Built for the [Agentic Commerce on Arc Hackathon](https://lablab.ai/event/agentic-commerce-on-arc) — April 20–26, 2026 | $10,000 prize pool
+**Built for [Agentic Commerce on Arc Hackathon](https://lablab.ai/event/agentic-commerce-on-arc) — April 20–26, 2026**
 
 ---
 
-## Quick Start
+## 🎥 Demo
 
-### 1. Backend
+<!-- Add demo video link here -->
+
+## ✨ What It Does
+
+AutoFX Agent monitors stablecoin FX rates 24/7 and autonomously executes swaps when user-defined conditions are met — **zero human intervention required**.
+
+1. User sets a policy: *"Swap 10 USDC → EURC when rate > 1.08"*
+2. Agent polls FX rates every 30 seconds
+3. Condition met → x402 payment protocol triggers
+4. Circle MPC Wallet signs transaction
+5. Arc Testnet settles in < 1 second
+6. Transaction logged with real txHash
+
+## 🏗️ Architecture                                                                                                                                                                                                 React Dashboard → Node.js Backend → Circle SDK → Arc Testnet
+↓
+Groq AI (LLaMA) → Market Analysis
+↓
+x402 Protocol → USDC Transfer                                                                                                                                                                                     ## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React + Vite + Tailwind CSS |
+| Backend | Node.js + Express |
+| AI Agent | Groq LLaMA 3.1 (market analysis) |
+| Payments | x402 Protocol (HTTP-native) |
+| Wallets | Circle Developer-Controlled Wallets (MPC) |
+| Blockchain | Arc Testnet (Circle L1) |
+| Settlement | USDC native gas |
+| Storage | LowDB (persistent policies) |
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+
+- Circle Developer Console account
+- Groq API key (free)
+
+### Backend
 ```bash
-cd backend
+cd Backend
 npm install
 cp .env.example .env
-# Fill in your API keys in .env
+# Fill in your API keys
 node src/index.js
 ```
 
-### 2. Frontend
+### Frontend
 ```bash
 cd frontend
 npm install
@@ -26,45 +63,40 @@ npm run dev
 
 Open `http://localhost:3000`
 
----
-
-## How It Works
-
-1. User sets a policy: *"Swap 10 USDC → EURC when rate > 1.08"*
-2. FX Monitor polls rates every 30 seconds
-3. AI Agent Core (LangChain + Claude) evaluates conditions
-4. x402 Handler executes payment via Circle MPC Wallet
-5. Arc Testnet settles in < 1 second
-6. Transaction logged in History
-
----
-
-## Stack
-
-| Layer | Tech |
-|---|---|
-| Frontend | React + Vite + Tailwind + Recharts |
-| Backend | Node.js + Express |
-| AI Agent | LangChain + Claude (claude-sonnet-4) |
-| Payments | x402 Protocol |
-| Wallets | Circle Programmable Wallets (MPC) |
-| Blockchain | Arc Testnet |
-
----
-
-## Environment Variables
+## ⚙️ Environment Variables
 
 ```env
-CIRCLE_API_KEY=           # From console.circle.com
-CIRCLE_BASE_URL=https://api-sandbox.circle.com
-ANTHROPIC_API_KEY=        # From console.anthropic.com
-CIRCLE_WALLET_SET_ID=     # From Circle Console → Wallets
-CIRCLE_AGENT_WALLET_ID=   # Your agent's wallet ID
+CIRCLE_API_KEY=TEST_API_KEY:xxx:xxx
+CIRCLE_ENTITY_SECRET=xxx
+CIRCLE_WALLET_SET_ID=xxx
+CIRCLE_AGENT_WALLET_ID=xxx
+CIRCLE_RECEIVER_ADDRESS=xxx
+GROQ_API_KEY=xxx
 PORT=4000
 ```
 
----
+## 🔑 Key Features
 
-## License
+- **Autonomous Execution** — zero clicks after policy set
+- **Real On-chain Transactions** — actual USDC transfers on Arc Testnet
+- **x402 Protocol** — HTTP-native payment standard
+- **AI Market Analysis** — Groq LLaMA analyzes live FX data
+- **Policy Engine** — rule-based guardrails (rate threshold, amount limits)
+- **Persistent Storage** — policies survive server restarts
+- **Bloomberg UI** — real-time rate ticker, area charts
 
-MIT — as required for hackathon submission.
+## 📊 Supported Pairs
+
+- USDC/EURC
+- EURC/USDC  
+- USDC/MXNB
+- USDC/JPYC
+
+## 🏆 Hackathon Tracks
+
+- ✅ Best Trustless AI Agent
+- ✅ Best Autonomous Commerce Application
+
+## 📄 License
+
+MIT
